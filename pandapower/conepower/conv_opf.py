@@ -10,9 +10,9 @@ from pandapower.conepower.solvers.socp import socp_execute
 from pandapower.conepower.types.relaxation_type import RelaxationType
 from pandapower.conepower.types.optimization_type import OptimizationType
 
-from pandapower.pypower.idx_brch import MU_ANGMAX
-from pandapower.pypower.idx_bus import MU_VMIN
-from pandapower.pypower.idx_gen import MU_QMIN
+from pandapower.pypower.idx_brch import branch_cols
+from pandapower.pypower.idx_bus import bus_cols
+from pandapower.pypower.idx_gen import gen_cols
 from pandapower.pypower.opf_args import opf_args2
 from pandapower.pypower.opf_setup import opf_setup
 
@@ -28,12 +28,12 @@ def conv_opf(ppc, ppopt, relaxation_str, enforce_equalities):
     nb = shape(ppc['bus'])[0]
     nl = shape(ppc['branch'])[0]
     ng = shape(ppc['gen'])[0]
-    if shape(ppc['bus'])[1] < MU_VMIN + 1:
-        ppc['bus'] = c_[ppc['bus'], zeros((nb, MU_VMIN + 1 - shape(ppc['bus'])[1]))]
-    if shape(ppc['gen'])[1] < MU_QMIN + 1:
-        ppc['gen'] = c_[ppc['gen'], zeros((ng, MU_QMIN + 1 - shape(ppc['gen'])[1]))]
-    if shape(ppc['branch'])[1] < MU_ANGMAX + 1:
-        ppc['branch'] = c_[ppc['branch'], zeros((nl, MU_ANGMAX + 1 - shape(ppc['branch'])[1]))]
+    if shape(ppc['bus'])[1] < bus_cols:
+        ppc['bus'] = c_[ppc['bus'], zeros((nb, bus_cols - shape(ppc['bus'])[1]))]
+    if shape(ppc['gen'])[1] < branch_cols + 1:
+        ppc['gen'] = c_[ppc['gen'], zeros((ng, branch_cols + 1 - shape(ppc['gen'])[1]))]
+    if shape(ppc['branch'])[1] < gen_cols:
+        ppc['branch'] = c_[ppc['branch'], zeros((nl, gen_cols - shape(ppc['branch'])[1]))]
 
     # construct OPF model object
     om = opf_setup(ppc, ppopt)
