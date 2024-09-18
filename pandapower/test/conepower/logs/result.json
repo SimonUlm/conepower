@@ -1,0 +1,269 @@
+{
+  "bus": {
+    "1": {
+      "zone": 1,
+      "bus_i": 1,
+      "bus_type": 3,
+      "vmax": 1.1,
+      "source_id": [
+        "bus",
+        1
+      ],
+      "w": 1.1681898355754183,
+      "area": 1,
+      "vmin": 0.9,
+      "index": 1,
+      "va": 0.0,
+      "vm": 1.0,
+      "base_kv": 240.0
+    },
+    "2": {
+      "zone": 1,
+      "bus_i": 2,
+      "bus_type": 2,
+      "vmax": 1.1,
+      "source_id": [
+        "bus",
+        2
+      ],
+      "w": 1.0360410568153744,
+      "area": 1,
+      "vmin": 0.9,
+      "index": 2,
+      "va": 0.0,
+      "vm": 1.0,
+      "base_kv": 240.0
+    },
+    "3": {
+      "zone": 1,
+      "bus_i": 3,
+      "bus_type": 2,
+      "vmax": 1.1,
+      "source_id": [
+        "bus",
+        3
+      ],
+      "w": 1.0013859010475725,
+      "area": 1,
+      "vmin": 0.9,
+      "index": 3,
+      "va": 0.0,
+      "vm": 1.0,
+      "base_kv": 240.0
+    }
+  },
+  "source_type": "matpower",
+  "name": "pglib_opf_case3_lmbd",
+  "dcline": {},
+  "source_version": "2",
+  "gen": {
+    "1": {
+      "vg": 1.0,
+      "mbase": 100.0,
+      "source_id": [
+        "gen",
+        1
+      ],
+      "pg": 1.3125550370160368,
+      "model": 2,
+      "shutdown": 0.0,
+      "startup": 0.0,
+      "index": 1,
+      "cost": [
+        1100.0,
+        500.0,
+        0.0
+      ],
+      "qg": 0.2744481296814154,
+      "qmax": 10.0,
+      "gen_status": 1,
+      "qmin": -10.0,
+      "gen_bus": 1,
+      "pmax": 20.0,
+      "pmin": 0.0,
+      "ncost": 3
+    },
+    "2": {
+      "vg": 1.0,
+      "mbase": 100.0,
+      "source_id": [
+        "gen",
+        2
+      ],
+      "pg": 1.8663744161548896,
+      "model": 2,
+      "shutdown": 0.0,
+      "startup": 0.0,
+      "index": 2,
+      "cost": [
+        850.0000000000001,
+        120.0,
+        0.0
+      ],
+      "qg": -0.07294859434033651,
+      "qmax": 10.0,
+      "gen_status": 1,
+      "qmin": -10.0,
+      "gen_bus": 2,
+      "pmax": 20.0,
+      "pmin": 0.0,
+      "ncost": 3
+    },
+    "3": {
+      "vg": 1.0,
+      "mbase": 100.0,
+      "source_id": [
+        "gen",
+        3
+      ],
+      "pg": 0.0,
+      "model": 2,
+      "shutdown": 0.0,
+      "startup": 0.0,
+      "index": 3,
+      "cost": [],
+      "qg": -0.00029183376955413875,
+      "qmax": 10.0,
+      "gen_status": 1,
+      "qmin": -10.0,
+      "gen_bus": 3,
+      "pmax": 0.0,
+      "pmin": 0.0,
+      "ncost": 0
+    }
+  },
+  "branch": {
+    "1": {
+      "br_r": 0.065,
+      "rate_a": 90.0,
+      "shift": 0.0,
+      "pt": -0.5422720621621514,
+      "rate_b": 90.0,
+      "br_x": 0.62,
+      "rate_c": 90.0,
+      "wr": 1.027687213149114,
+      "g_to": 0.0,
+      "g_fr": 0.0,
+      "source_id": [
+        "branch",
+        1
+      ],
+      "b_fr": 0.225,
+      "f_bus": 1,
+      "br_status": 1,
+      "t_bus": 3,
+      "b_to": 0.225,
+      "index": 1,
+      "wi": 0.3371466046309127,
+      "qf": -0.09507919649549686,
+      "angmin": -0.5235987755982988,
+      "angmax": 0.5235987755982988,
+      "transformer": false,
+      "qt": -0.2108821955760289,
+      "tap": 1.0,
+      "pf": 0.5613729567806387
+    },
+    "2": {
+      "br_r": 0.025,
+      "rate_a": 0.5,
+      "shift": 0.0,
+      "pt": 0.41242857711134895,
+      "rate_b": 0.5,
+      "br_x": 0.75,
+      "rate_c": 0.5,
+      "wr": 0.965772529113675,
+      "g_to": 0.0,
+      "g_fr": 0.0,
+      "source_id": [
+        "branch",
+        2
+      ],
+      "b_fr": 0.35,
+      "f_bus": 3,
+      "br_status": 1,
+      "t_bus": 2,
+      "b_to": 0.35,
+      "index": 2,
+      "wi": -0.3073228390577145,
+      "qf": -0.2894096381935253,
+      "angmin": -0.5235987755982988,
+      "angmax": 0.5235987755982988,
+      "transformer": false,
+      "qt": -0.2826706188534933,
+      "tap": 1.0,
+      "pf": -0.4077279378378485
+    },
+    "3": {
+      "br_r": 0.042,
+      "rate_a": 90.0,
+      "shift": 0.0,
+      "pt": 0.3539458390435407,
+      "rate_b": 90.0,
+      "br_x": 0.9,
+      "rate_c": 90.0,
+      "wr": 1.0525599668436292,
+      "g_to": 0.0,
+      "g_fr": 0.0,
+      "source_id": [
+        "branch",
+        3
+      ],
+      "b_fr": 0.15,
+      "f_bus": 1,
+      "br_status": 1,
+      "t_bus": 2,
+      "b_to": 0.15,
+      "index": 3,
+      "wi": -0.32001587145169713,
+      "qf": -0.030472673823087743,
+      "angmin": -0.5235987755982988,
+      "angmax": 0.5235987755982988,
+      "transformer": false,
+      "qt": -0.19027797548684325,
+      "tap": 1.0,
+      "pf": -0.34881791976460197
+    }
+  },
+  "storage": {},
+  "switch": {},
+  "multinetwork": false,
+  "baseMVA": 100.0,
+  "per_unit": true,
+  "shunt": {},
+  "multiinfrastructure": false,
+  "load": {
+    "1": {
+      "source_id": [
+        "bus",
+        1
+      ],
+      "load_bus": 1,
+      "status": 1,
+      "qd": 0.4,
+      "pd": 1.1,
+      "index": 1
+    },
+    "2": {
+      "source_id": [
+        "bus",
+        2
+      ],
+      "load_bus": 2,
+      "status": 1,
+      "qd": 0.4,
+      "pd": 1.1,
+      "index": 2
+    },
+    "3": {
+      "source_id": [
+        "bus",
+        3
+      ],
+      "load_bus": 3,
+      "status": 1,
+      "qd": 0.5,
+      "pd": 0.95,
+      "index": 3
+    }
+  }
+}
