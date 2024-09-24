@@ -1055,7 +1055,7 @@ def _add_pf_options(net, tolerance_mva, trafo_loading, numba, ac,
     _add_options(net, options)
 
 
-def _add_opf_options(net, trafo_loading, ac, relaxation=None, enforce_equalities=False, v_debug=False, **kwargs):
+def _add_opf_options(net, trafo_loading, ac, relaxation=None, enforce_ext_grid_vm=True, v_debug=False, **kwargs):
     """
     creates dictionary for pf, opf and short circuit calculations from input parameters.
     """
@@ -1063,7 +1063,7 @@ def _add_opf_options(net, trafo_loading, ac, relaxation=None, enforce_equalities
         "trafo_loading": trafo_loading,
         "ac": ac,
         "relaxation": relaxation,
-        "enforce_equalities": enforce_equalities,
+        "enforce_ext_grid_vm": enforce_ext_grid_vm,
         "v_debug": v_debug
     }
 
@@ -1736,7 +1736,7 @@ def _init_rundcopp_options(net, check_connectivity, switch_rx_ratio, delta, traf
 
 
 def _init_runconvopp_options(net, check_connectivity, delta, init, numba,
-                             relaxation="jabr", enforce_equalities=False,
+                             relaxation="jabr", enforce_ext_grid_vm=True,
                              **kwargs):
     if numba:
         numba = _check_if_numba_is_installed()
@@ -1755,8 +1755,8 @@ def _init_runconvopp_options(net, check_connectivity, delta, init, numba,
     use_umfpack = kwargs.get("use_umfpack", True)
     permc_spec = kwargs.get("permc_spec", None)
     lightsim2grid = kwargs.get("lightsim2grid", False)
-    if enforce_equalities:
-        delta = 0
+    # set delta to zero as setpoints are enforced by equality constraints
+    delta = 0
 
     net._options = {}
     _add_ppc_options(net, calculate_voltage_angles=calculate_voltage_angles,
@@ -1767,7 +1767,7 @@ def _init_runconvopp_options(net, check_connectivity, delta, init, numba,
                      delta=delta, trafo3w_losses=trafo3w_losses,
                      consider_line_temperature=consider_line_temperature)
     _add_opf_options(net, trafo_loading=trafo_loading, ac=ac, init=init, numba=numba,
-                     relaxation=relaxation, enforce_equalities=enforce_equalities,
+                     relaxation=relaxation, enforce_ext_grid_vm=enforce_ext_grid_vm,
                      lightsim2grid=lightsim2grid,
                      only_v_results=only_v_results, use_umfpack=use_umfpack, permc_spec=permc_spec)
 
