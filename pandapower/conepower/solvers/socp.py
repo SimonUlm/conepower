@@ -47,6 +47,8 @@ def socp_execute(model: ModelSocp) -> np.ndarray:
     # initial values
     # TODO: Initial values für Slack und Socp werden auch genötigt.
 
+    solvers.options['reltol'] = 1e-9
+
     if model.cost.is_linear():
         sol = solvers.conelp(c=c,
                              G=g, h=h, dims=dims,
