@@ -1,4 +1,3 @@
-import math
 from typing import Tuple
 from os import listdir
 
@@ -11,7 +10,7 @@ from pandapower.conepower.study.process_simbench import (InverterControlMode, St
 
 
 NETWORK_PATH = "../networks"
-OUTPUT_FILE_1 = "../../../../../Documents/Thesis/tables/power_flow_1.tex"  # TODO: Do this properly
+OUTPUT_FILE_1 = "../../../../../Documents/Thesis/tables/power_flow_1.tex"
 OUTPUT_FILE_2 = "../../../../../Documents/Thesis/tables/power_flow_2.tex"
 
 

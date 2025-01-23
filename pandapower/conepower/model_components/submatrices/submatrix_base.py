@@ -5,27 +5,112 @@ from scipy import sparse
 
 
 class HermitianSubmatrix:
-    _complex_size: int  # number of complex-valued variables in upper triangle
+    """
+    Represents a Hermitian submatrix, i.e., a partially defined Hermitian matrix.
+
+    A Hermitian submatrix is a square matrix where:
+    1. Only some of the elements are explicitly defined, while others are left undefined.
+    2. The explicitly defined elements satisfy the Hermitian property,
+    i.e., the element at (i, j) is the complex conjugate of the element at (j, i).
+
+    Example:
+        The matrix
+        [1, -, 5;
+        -, 2, 6;
+        5, 6, 3]
+        is a Hermitian submatrix, where '-' represents an undefined element.
+
+    To leverage the Hermitian property, a Hermitian submatrix is stored by only including the variables
+    in the upper triangle of the matrix, in the following order:
+    1. The diagonal elements.
+    2. The real parts of the off-diagonal elements in the strict upper triangle, stored row-wise.
+    3. The imaginary parts of the off-diagonal elements in the strict upper triangle, stored row-wise.
+
+    Example:
+        The submatrix above would be stored as [1, 2, 3, 5, 6, 0, 0].
+
+    This class also provides methods for working with Hermitian submatrices,
+    such as checking consistency or extracting properties of the submatrix.
+
+    This class provides efficient storage and manipulation of Hermitian submatrices,
+    along with methods for tasks such as checking consistency or extracting properties of the submatrix.
+
+    Attributes
+    ----------
+    dim : int
+        The dimension of the submatrix (i.e., the number of rows or columns, as it is square).
     _data: sparse.coo_array
+        The stored data of the submatrix in a sparse format.
+    _nof_unique_edges : int
+        The number of (complex-valued) elements in the strict upper triangle.
+    _complex_size: int
+        The number of diagonal elements plus the number of (complex-valued) elements in the strict upper triangle.
+    _real_size: int
+        The total number of real-valued components stored:
+        the number of diagonal elements plus twice the number of complex-valued elements in the strict upper triangle.
+        This value matches the size of `_data`.
+    _offset_complex_to_real : int
+        The offset between the real parts of the elements in the strict upper triangle and their imaginary parts.
+        This value equals `_nof_unique_edges`.
+    _half_index_matrix : sparse.csr_matrix
+        A sparse matrix where each element indicates the position in `_data`
+        where the real part of the corresponding matrix element is stored.
+        A value of 0 means the element is either not in the strict upper triangle or is undefined in the submatrix.
+    _full_off_diag_to_sym_upper_tri : sparse.csc_matrix
+        Assume `d` is a vector storing the real parts of **all** off-diagonal elements of the submatrix
+        in row-wise order (not leveraging Hermiticity).
+        Let `v` be a vector multiplied with `d` such that `v^T * d = s`.
+        This attribute helps to transform the problem allowing the same result `s` to be computed
+        using the real parts of the off-diagonal elements stored in `_data` (denoted as `r`):
+        `v^T * full_off_diag_to_sym_upper_tri * r = s`.
+    _full_off_diag_to_antisym_upper_tri : sparse.csc_matrix
+        Assume `d` is a vector storing the imaginary parts of **all** off-diagonal elements of the submatrix
+        in row-wise order (not leveraging Hermiticity).
+        Let `v` be a vector multiplied with `d` such that `v^T * d = s`.
+        This attribute helps to transform the problem allowing the same result `s` to be computed
+        using the imaginary parts of the off-diagonal elements stored in `_data` (denoted as `c`):
+        `v^T * full_off_diag_to_antisym_upper_tri * c = s`.
+    """
     dim: int
-    _full_off_diag_to_antisym_upper_tri: sparse.csc_matrix
-    _full_off_diag_to_sym_upper_tri: sparse.csc_matrix
-    _half_index_matrix: sparse.csr_matrix
+    _data: sparse.coo_array
     _nof_unique_edges: int
+    _complex_size: int
+    _real_size: int
     _offset_complex_to_real: int
-    _real_size: int  # number of real-valued variables in upper triangle
+    _half_index_matrix: sparse.csr_matrix
+    _full_off_diag_to_sym_upper_tri: sparse.csc_matrix
+    _full_off_diag_to_antisym_upper_tri: sparse.csc_matrix
 
     @staticmethod
     def _validate_matrix(matrix: sparse.csr_matrix):
-        assert type(matrix) is sparse.csr_matrix
-        assert matrix.shape[0] == matrix.shape[1]
+        """
+        Validates whether the given matrix is a valid adjacency matrix for an undirected graph.
+
+        Raises
+        ------
+        TypeError
+            If the matrix is not stored in the csr format.
+        ValueError
+            If it is not a square matrix that implicitly defines an undirected graph.
+        """
+        if type(matrix) is not sparse.csr_matrix:
+            raise TypeError("The matrix needs to be stored in the csr format.")
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("The matrix needs to be a square matrix.")
         assert matrix.shape[0] > 0
+        if matrix.shape[0] == 0:
+            raise ValueError("The dimension of the matrix needs to be greater than zero.")
         transposed: sparse.csr_matrix = matrix.transpose().tocsr()
-        assert np.any(np.equal(matrix.indices, transposed.indices))
-        assert np.any(np.equal(matrix.indptr, transposed.indptr))
+        if not (np.all(np.equal(matrix.indices, transposed.indices)) and
+                np.all(np.equal(matrix.indptr, transposed.indptr))):
+            raise ValueError("The graph defined by the matrix needs to be undirected.")
 
     @staticmethod
     def _remove_lower_triangle(full_matrix: sparse.csr_matrix) -> sparse.csr_matrix:
+        """
+        Sets all elements below the main diagonal (the strict lower triangle) to zero
+        and removes them from the sparse matrix.
+        """
         half_matrix = full_matrix.copy()
         for row_idx in range(half_matrix.shape[0]):
             row_start = half_matrix.indptr[row_idx]
@@ -96,10 +181,34 @@ class HermitianSubmatrix:
         self._full_off_diag_to_sym_upper_tri = mapping_matrix.tocsr(copy=True).transpose()
         self._full_off_diag_to_sym_upper_tri.data[:] = 1
 
-    def _get_idx(self, i, j) -> (int, bool):
+    def _get_idx(self, i: int, j: int) -> (int, bool):
+        """
+        Returns the index in the `_data` storage that corresponds to the element at (i, j) in the Hermitian submatrix,
+        along with a boolean indicating whether the element is in the strict lower triangle.
+
+        Parameters
+        ----------
+        i : int
+            The row index of the element.
+        j : int
+            The column index of the element.
+
+        Returns
+        -------
+        index, conj : (int, bool)
+            The index in the `_data` array corresponding to the element at (i, j),
+            and boolean value that indicates whether the element is in the strict lower triangle.
+
+        Raises
+        ------
+        IndexError
+            If the submatrix does not contain an element with row index i and column index j.
+        """
         # validate
-        assert i < self.dim
-        assert j < self.dim
+        if i >= self.dim:
+            raise IndexError(f"Row index {i} exceeds the dimensions of the submatrix.")
+        if j >= self.dim:
+            raise IndexError(f"Row index {i} exceeds the dimensions of the submatrix.")
 
         # diagonal
         if i == j:
@@ -108,16 +217,16 @@ class HermitianSubmatrix:
         # upper triangle
         if i < j:
             idx = self._half_index_matrix[i, j]
-            assert idx != 0
+            if idx == 0:
+                raise IndexError(f"No element exists at ({i}, {j}).")
             return idx, False
 
         # lower triangle
         if i > j:
             idx = self._half_index_matrix[j, i]
-            assert idx != 0
+            if idx == 0:
+                raise IndexError(f"No element exists at ({i}, {j}).")
             return idx, True
-
-        assert False
 
     def __getitem__(self, key: (int, int)) -> complex:
         i, j = key
@@ -133,7 +242,8 @@ class HermitianSubmatrix:
         i, j = key
         idx, conj = self._get_idx(i, j)
         if idx < self.dim:
-            assert value.imag == 0
+            if value.imag != 0:
+                raise ValueError(f"The element at ({i}, {j}) must be real-valued.")
             self._data.data[idx] = value.real
         elif conj:
             self._data.data[idx] = value.real
@@ -143,9 +253,25 @@ class HermitianSubmatrix:
             self._data.data[idx+self._offset_complex_to_real] = value.imag
 
     def get_connectivity_matrix(self) -> sparse.csc_matrix:
+        """
+        Returns the adjacency matrix of the undirected graph implicitly defined by the Hermitian submatrix.
+
+        Returns
+        -------
+        adj_matrix : sparse.csc_matrix
+            The corresponding adjacency matrix.
+        """
         matrix = self._half_index_matrix.tocsc() + self._half_index_matrix.transpose()
         matrix.data[:] = 1
         return matrix
 
-    def get_diagonal(self) -> np.ndarray[float]:
+    def get_diagonal(self) -> np.ndarray:
+        """
+        Returns the diagonal of the submatrix as a dense array.
+
+        Returns
+        -------
+        diag : np.ndarray
+            The diagonal.
+        """
         return self._data.data[:self.dim]

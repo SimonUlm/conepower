@@ -10,7 +10,7 @@ from pandapower.conepower.study.process_simbench import StudyCase, lv_grid_to_op
 
 
 NETWORK_PATH = "../networks"
-EXACTNESS_OUTPUT_FILE_1 = "../../../../../Documents/Thesis/tables/exactness_1.tex"  # TODO: Do this properly
+EXACTNESS_OUTPUT_FILE_1 = "../../../../../Documents/Thesis/tables/exactness_1.tex"
 EXACTNESS_OUTPUT_FILE_2 = "../../../../../Documents/Thesis/tables/exactness_2.tex"
 
 

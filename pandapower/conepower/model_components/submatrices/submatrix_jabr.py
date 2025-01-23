@@ -8,16 +8,121 @@ from pandapower.conepower.model_components.submatrices.submatrix_base import Her
 
 
 class JabrSubmatrix(HermitianSubmatrix):
+    """
+    Represents a Hermitian submatrix, i.e., a partially defined Hermitian matrix, that is used for Jabr's Relaxation.
 
+    A Hermitian submatrix is a square matrix where:
+    1. Only some of the elements are explicitly defined, while others are left undefined.
+    2. The explicitly defined elements satisfy the Hermitian property, i.e.,
+    the element at (i, j) is the complex conjugate of the element at (j, i).
+
+    Example:
+        The matrix
+        [1, -, 5;
+        -, 2, 6;
+        5, 6, 3]
+        is a Hermitian submatrix, where '-' represents an undefined element.
+
+    To leverage the Hermitian property, a Hermitian submatrix is stored by only including the variables
+    in the upper triangle of the matrix, in the following order:
+    1. The diagonal elements.
+    2. The real parts of the off-diagonal elements in the strict upper triangle, stored row-wise.
+    3. The imaginary parts of the off-diagonal elements in the strict upper triangle, stored row-wise.
+
+    Example:
+        The submatrix above would be stored as [1, 2, 3, 5, 6, 0, 0].
+
+    This class also provides methods for working with Hermitian submatrices,
+    such as checking consistency or extracting properties of the submatrix.
+
+    This class provides efficient storage and manipulation of Hermitian submatrices,
+    along with methods for tasks such as checking consistency or extracting properties of the submatrix,
+    as well as necessary methods deploying Jabr's Relaxation.
+
+    Attributes
+    ----------
+    dim : int
+        The dimension of the submatrix (i.e., the number of rows or columns, as it is square).
+    _data: sparse.coo_array
+        The stored data of the submatrix in a sparse format.
+    _nof_unique_edges : int
+        The number of (complex-valued) elements in the strict upper triangle.
+    _complex_size: int
+        The number of diagonal elements plus the number of (complex-valued) elements in the strict upper triangle.
+    _real_size: int
+        The total number of real-valued components stored:
+        the number of diagonal elements plus twice the number of complex-valued elements in the strict upper triangle.
+        This value matches the size of `_data`.
+    _offset_complex_to_real : int
+        The offset between the real parts of the elements in the strict upper triangle and their imaginary parts.
+        This value equals `_nof_unique_edges`.
+    _half_index_matrix : sparse.csr_matrix
+        A sparse matrix where each element indicates the position in `_data`
+        where the real part of the corresponding matrix element is stored.
+        A value of 0 means the element is either not in the strict upper triangle or is undefined in the submatrix.
+    _full_off_diag_to_sym_upper_tri : sparse.csc_matrix
+        Assume `d` is a vector storing the real parts of **all** off-diagonal elements of the submatrix
+        in row-wise order (not leveraging Hermiticity).
+        Let `v` be a vector multiplied with `d` such that `v^T * d = s`.
+        This attribute helps to transform the problem allowing the same result `s` to be computed
+        using the real parts of the off-diagonal elements stored in `_data` (denoted as `r`):
+        `v^T * full_off_diag_to_sym_upper_tri * r = s`.
+    _full_off_diag_to_antisym_upper_tri : sparse.csc_matrix
+        Assume `d` is a vector storing the imaginary parts of **all** off-diagonal elements of the submatrix
+        in row-wise order (not leveraging Hermiticity).
+        Let `v` be a vector multiplied with `d` such that `v^T * d = s`.
+        This attribute helps to transform the problem allowing the same result `s` to be computed
+        using the imaginary parts of the off-diagonal elements stored in `_data` (denoted as `c`):
+        `v^T * full_off_diag_to_antisym_upper_tri * c = s`.
+    _nof_lines : int
+        The number of electrical lines. This value can be higher than `_nof_unique_edges`,
+        as edges with more than one line can exist.
+    _lines_to_diag_ff : sparse.csc_matrix
+        A transformation matrix where each row represents a line.
+        For each row representing the line (`i`, `j`), it contains a `1` at the position that corresponds to the index
+        in `_data` where (`i`, `i`) is stored.
+    _lines_to_diag_tt : sparse.csc_matrix
+        A transformation matrix where each row represents a line.
+        For each row representing the line (`i`, `j`), it contains a `1` at the position that corresponds to the index
+        in `_data` where (`j`, `j`) is stored.
+    _lines_to_real_off_diag_ft : sparse.csc_matrix
+        A transformation matrix where each row represents a line.
+        For each row representing the line (`i`, `j`), it contains a `1` at the position that corresponds to the index
+        in `_data` where the real part of (`i`, `j`) is stored.
+    _lines_to_real_off_diag_tf : sparse.csc_matrix
+        A transformation matrix where each row represents a line.
+        For each row representing the line (`i`, `j`), it contains a `1` at the position that corresponds to the index
+        in `_data` where the real part of (`j`, `i`) is stored.
+    _lines_to_imag_off_diag_ft : sparse.csc_matrix
+        A transformation matrix where each row represents a line.
+        For each row representing the line (`i`, `j`), it contains a `1` at the position that corresponds to the index
+        in `_data` where the imaginary part of (`i`, `j`) is stored.
+        If (`i`, `j`) is not explicitly stored (but instead (`j`, `i`)), it is indicated by `-1`instead of `1`.
+    _lines_to_imag_off_diag_ft : sparse.csc_matrix
+        A transformation matrix where each row represents a line.
+        For each row representing the line (`i`, `j`), it contains a `1` at the position that corresponds to the index
+        in `_data` where the imaginary part of (`j`, `i`) is stored.
+        If (`j`, `i`) is not explicitly stored (but instead (`i`, `j`)), it is indicated by `-1`instead of `1`.
+    """
+    _nof_lines: int
     _lines_to_diag_ff: sparse.csc_matrix
     _lines_to_diag_tt: sparse.csc_matrix
-    _lines_to_imag_off_diag_ft: sparse.csc_matrix
-    _lines_to_imag_off_diag_tf: sparse.csc_matrix
     _lines_to_real_off_diag_ft: sparse.csc_matrix
     _lines_to_real_off_diag_tf: sparse.csc_matrix
-    _nof_lines: int
+    _lines_to_imag_off_diag_ft: sparse.csc_matrix
+    _lines_to_imag_off_diag_tf: sparse.csc_matrix
 
     def _create_transformation_matrices(self, nodes_from: np.ndarray, nodes_to: np.ndarray):
+        """
+        Creates the transformation matrices needed for assembling the line constraints.
+
+        Parameters
+        ----------
+        nodes_from : np.ndarray
+            The list of starting nodes of the lines.
+        nodes_to : np.ndarray
+            The list of ending nodes of the lines.
+        """
         # initialize
         self._nof_lines = nodes_from.size
         assert nodes_to.size == self._nof_lines
@@ -78,6 +183,34 @@ class JabrSubmatrix(HermitianSubmatrix):
     @staticmethod
     def _transform_to_diagonal_block_matrices_without_diagonal(matrix: sparse.csr_matrix)\
             -> Tuple[sparse.csr_matrix, sparse.csr_matrix]:
+        """
+        Eliminates all diagonal elements as well as all zero elements from the matrix.
+        Each row is than considered to be a block and a corresponding diagonal block matrix is assembled.
+
+        Example:
+            Consider the matrix
+            [1, 5, 0, 6;
+            5, 2, 7, 0;
+            0, 7, 3, 0;
+            6, 0, 0, 4].
+            Then, after eliminating the diagonal elements and all zeroes, and regarding each row as block, the matrix
+            [5, 6, 0, 0, 0, 0;
+            0, 0, 5, 7, 0, 0;
+            0, 0, 0, 0, 7, 0;
+            0, 0, 0, 0, 0, 6]
+            is obtained.
+
+        Parameters
+        ----------
+        matrix : sparse.csr_matrix
+            A matrix.
+
+        Returns
+        -------
+        matrices : Tuple[sparse.csr_matrix, sparse.csr_matrix]
+            The resulting diagonal block matrix,
+            separated into two matrices representing real and imaginary part, respectively.
+        """
         matr_without_diag = matrix.copy()
         matr_without_diag.setdiag(0)
         filtered_rows = [sparse.csr_matrix(matr_without_diag[i][matr_without_diag[i] != 0])
@@ -86,6 +219,21 @@ class JabrSubmatrix(HermitianSubmatrix):
         return np.real(diag_block), np.imag(diag_block)
 
     def create_pg_linear_system_matrix(self, adm_matr: sparse.csr_matrix) -> sparse.csr_matrix:
+        """
+        Creates the real part of the power flow equations (excluding generators) with respect to Jabr's Relaxation.
+        The equations are a linear system of the form A * x = b,
+        where x is the variable vector which is equivalent to `_data`.
+
+        Parameters
+        ----------
+        adm_matr : sparse.csr_matrix
+            Admittance matrix representing the electrical network.
+
+        Returns
+        -------
+        A : sparse.csr_matrix
+            The matrix A of the linear system A * x = b.
+        """
         adm_real_diag = sparse.diags(np.real(adm_matr.diagonal()))
         real_diag_block, imag_diag_block = self._transform_to_diagonal_block_matrices_without_diagonal(adm_matr)
         real_diag_block = real_diag_block @ self._full_off_diag_to_sym_upper_tri
@@ -93,6 +241,21 @@ class JabrSubmatrix(HermitianSubmatrix):
         return sparse.hstack((adm_real_diag, real_diag_block, imag_diag_block), 'csr')
 
     def create_qg_linear_system_matrix(self, adm_matr: sparse.csr_matrix) -> sparse.csr_matrix:
+        """
+        Creates the imaginary part of the power flow equations (excluding generators) with respect to Jabr's Relaxation.
+        The equations are a linear system of the form A * x = b,
+        where x is the variable vector representing `_data`.
+
+        Parameters
+        ----------
+        adm_matr : sparse.csr_matrix
+            Admittance matrix representing the electrical network.
+
+        Returns
+        -------
+        A : sparse.csr_matrix
+            The matrix A of the linear system A * x = b.
+        """
         adm_imag_diag = sparse.diags(np.imag(adm_matr.diagonal()))
         real_diag_block, imag_diag_block = self._transform_to_diagonal_block_matrices_without_diagonal(adm_matr)
         real_diag_block = real_diag_block @ self._full_off_diag_to_antisym_upper_tri
@@ -100,6 +263,16 @@ class JabrSubmatrix(HermitianSubmatrix):
         return sparse.hstack((-adm_imag_diag, -imag_diag_block, real_diag_block), 'csr')
 
     def create_jabr_constraints(self) -> Tuple[List[sparse.lil_matrix], List[sparse.lil_matrix]]:
+        """
+        Creates the socp constraints that relax the conventional OPF.
+
+        Returns
+        -------
+        matrices : Tuple[List[sparse.lil_matrix], List[sparse.lil_matrix]]
+            Returns the matrices `E_i` and the vectors `g_i`, describing the socp constraints
+            `||E_i * x|| + g_i^T * x <= 0` for `i = 1, ..., q`,
+            where x is the variable vector representing `_data`.
+        """
         # initialize lists and calculate offsets
         size = self.dim + self._nof_unique_edges * 2
         matrix_list = [sparse.lil_matrix((3, size), dtype=float) for _ in range(self._nof_unique_edges)]
@@ -131,6 +304,29 @@ class JabrSubmatrix(HermitianSubmatrix):
                                                y_tf: np.ndarray,
                                                y_tt: np.ndarray) ->\
             Tuple[List[sparse.lil_matrix], List[float]]:
+        """
+        Creates socp constraints that limit apparent power flow on the electrical lines.
+
+        Parameters
+        ----------
+        max_apparent_powers : np.ndarray
+            Upper bounds on apparent power per line.
+        y_ff : np.ndarray
+            Admittances `y_ff` as defined by PYPOWER.
+        y_ft : np.ndarray
+            Admittances `y_ft` as defined by PYPOWER.
+        y_tf : np.ndarray
+            Admittances `y_tf` as defined by PYPOWER.
+        y_tt : np.ndarray
+            Admittances `y_tt` as defined by PYPOWER.
+
+        Returns
+        -------
+        matrices : Tuple[List[sparse.lil_matrix], List[float]]
+            Returns the matrices `E_i` and the scalars `d_i`, describing the socp constraints
+            `||E_i * x|| + d_i <= 0 for i = 1, ..., q`,
+            where x is the variable vector representing `_data`.
+        """
         # create two diagonal matrices (one real and one imaginary) for each admittance vector
         real_y_ff = sparse.diags(np.real(y_ff))
         real_y_ft = sparse.diags(np.real(y_ft))
@@ -186,6 +382,28 @@ class JabrSubmatrix(HermitianSubmatrix):
                                         y_tf: np.ndarray,
                                         y_tt: np.ndarray) ->\
             Tuple[sparse.csr_matrix, np.ndarray]:
+        """
+        Creates linear constraints that limit current flow on the electrical lines.
+
+        Parameters
+        ----------
+        max_currents : np.ndarray
+            Upper bounds on current per line.
+        y_ff : np.ndarray
+            Admittances `y_ff` as defined by PYPOWER.
+        y_ft : np.ndarray
+            Admittances `y_ft` as defined by PYPOWER.
+        y_tf : np.ndarray
+            Admittances `y_tf` as defined by PYPOWER.
+        y_tt : np.ndarray
+            Admittances `y_tt` as defined by PYPOWER.
+
+        Returns
+        -------
+        matrices : Tuple[sparse.csr_matrix, np.ndarray]
+            Returns the matrices `A` and the vector `b`, describing the linear constraints
+            'A * x = b', where x is the variable vector representing `_data`.
+        """
         # transform admittance vectors to diagonal matrices for better readability
         y_ff: sparse.dia_matrix = sparse.diags(y_ff)
         y_ft: sparse.dia_matrix = sparse.diags(y_ft)

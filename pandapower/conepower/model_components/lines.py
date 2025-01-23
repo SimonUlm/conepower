@@ -4,16 +4,19 @@ from pandapower.conepower.types.line_constraint_type import LineConstraintType
 
 
 class Lines:
-    buses_from: np.ndarray[int]
-    buses_to: np.ndarray[int]
+    """
+    Represents the electrical lines of the network, including their orientation and respective limits.
+    """
+    buses_from: np.ndarray
+    buses_to: np.ndarray
     constraint_type: LineConstraintType
-    max_line_flows: np.ndarray[float]
+    max_line_flows: np.ndarray
     nof_lines: int
 
     def __init__(self,
-                 buses_from: np.ndarray[int],
-                 buses_to: np.ndarray[int],
-                 max_apparent_powers: np.ndarray[float],
+                 buses_from: np.ndarray,
+                 buses_to: np.ndarray,
+                 max_apparent_powers: np.ndarray,
                  constraint_type: LineConstraintType):
         self.nof_lines = max_apparent_powers.size
         assert buses_from.size == self.nof_lines

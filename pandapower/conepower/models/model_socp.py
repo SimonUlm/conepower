@@ -22,13 +22,36 @@ FEASTOL = 1e-7  # cvxopt default: 1e-7
 
 
 class ModelSocp:
+    """
+    Represents a generic second-order cone program.
+
+    This class also includes a method to solve the problem.
+
+    Attributes
+    ----------
+    cost : QuadraticCost
+        The cost function which is either quadratic or linear.
+    linear_equality_constraints : LinearConstraints
+        Generic linear equality constraints.
+    linear_inequality_constraints : LinearConstraints
+        Generic linear inequality constraints.
+    nof_variables : int
+        The number of scalar-valued variables of the problem.
+    socp_constraints : SocpConstraints
+        Generic socp constraints.
+    values : np.ndarray
+        The variable vector.
+    _has_auxiliary_variable : bool
+        Indicates whether the problem includes an auxiliary variable which can be used to solve a linear socp,
+        even if the cost function is quadratic.
+    """
     cost: QuadraticCost
-    _has_auxiliary_variable: bool
     linear_equality_constraints: LinearConstraints
     linear_inequality_constraints: LinearConstraints
     nof_variables: int
     socp_constraints: SocpConstraints
     values: np.ndarray
+    _has_auxiliary_variable: bool
 
     def __init__(self, nof_variables: int):
         self.linear_equality_constraints = LinearConstraints()
@@ -38,7 +61,9 @@ class ModelSocp:
         self.nof_variables = nof_variables
 
     def _box_to_linear_constraints(self, jabr: ModelJabr):
-
+        """
+        Transforms the box constraints into generic linear inequality constraints.
+        """
         # initialize
         nof_box_constraints = (jabr.variable_sets[VariableType.PG].size +
                                jabr.variable_sets[VariableType.QG].size +
@@ -79,6 +104,10 @@ class ModelSocp:
         self.linear_equality_constraints += LinearConstraints(ub_matrix[mask_inv, :], ub_vector[mask_inv])
 
     def _qp_to_lp(self):
+        """
+        Transforms the quadratic problem into a linear one by introducing
+        an auxiliary variable and additional socp constraint.
+        """
         # add auxiliary variable
         self._has_auxiliary_variable = True
         self.nof_variables += 1
@@ -101,6 +130,9 @@ class ModelSocp:
 
     @staticmethod
     def _sparse_matrix_to_cvxopt(matrix) -> cvxmatrix:
+        """
+        Casts the matrix into the type required by CVXOPT.
+        """
         matrix = matrix.tocoo()
         return cvxmatrix(matrix.data.tolist(),
                          matrix.row.tolist(),
@@ -109,10 +141,26 @@ class ModelSocp:
 
     @staticmethod
     def _dense_vector_to_cvxopt(vector: np.ndarray) -> cvxvector:
+        """
+        Casts the vector into the type required by CVXOPT.
+        """
         return cvxvector(vector)
 
     @classmethod
     def from_jabr(cls, jabr: ModelJabr):
+        """
+        Transforms Jabr's Relaxation into a generic second-order cone program.
+
+        Parameters
+        ----------
+        jabr : ModelOpf
+            The object that represents the OPF problem, relaxed with respect to Jabr's Relaxation.
+
+        Returns
+        -------
+        socp : ModelSocp
+            An instance of the ModelSocp class.
+        """
         # initialize
         socp = cls(jabr.nof_variables)
 
@@ -140,6 +188,11 @@ class ModelSocp:
         return socp
 
     def solve(self) -> Tuple[bool, float, np.ndarray]:
+        """
+        Solves the second-order cone program.
+
+        Note that the solver currently does not accept initial values.
+        """
         # linear part of objective function
         c = self._dense_vector_to_cvxopt(self.cost.linear_vector)
 
@@ -162,9 +215,6 @@ class ModelSocp:
         a_eq, b_eq, _ = self.linear_equality_constraints.to_cone_formulation()
         a = self._sparse_matrix_to_cvxopt(a_eq)
         b = self._dense_vector_to_cvxopt(b_eq)
-
-        # initial values
-        # TODO: Initial values für Slack und Socp werden auch genötigt.
 
         solvers.options['show_progress'] = not SILENT
         solvers.options['maxiters'] = MAXITERS

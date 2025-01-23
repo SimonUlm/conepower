@@ -3,6 +3,9 @@ from scipy import sparse
 
 
 class Admittances:
+    """
+    Represents all information about the admittances of the electrical network.
+    """
     y_bus: sparse.csr_matrix
     y_ff: np.ndarray
     y_ft: np.ndarray

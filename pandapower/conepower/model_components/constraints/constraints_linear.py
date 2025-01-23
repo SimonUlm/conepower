@@ -7,6 +7,9 @@ from pandapower.conepower.model_components.constraints.constraints_base import C
 
 
 class LinearConstraints(Constraints):
+    """
+    Linear constraints of the form A * x = b, where x is the variable vector, A is matrix, and b is a vector.
+    """
     matrix: sparse.csr_matrix = None
     rhs: np.ndarray = None
 

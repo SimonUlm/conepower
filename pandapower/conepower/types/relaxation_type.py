@@ -2,6 +2,9 @@ from enum import Enum
 
 
 class RelaxationType(Enum):
+    """
+    Specifies the relaxation strategy.
+    """
     UNKNOWN = 0
     JABR = 1
 

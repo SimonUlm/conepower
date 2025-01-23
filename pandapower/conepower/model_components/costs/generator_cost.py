@@ -2,6 +2,9 @@ import numpy as np
 
 
 class GeneratorCost:
+    """
+    Contains the three cost factors (constant, linear, and quadratic) per generator.
+    """
     nof_generators: int
     constants: np.ndarray
     linear_coefficients: np.ndarray
@@ -32,4 +35,7 @@ class GeneratorCost:
             self.constants = np.zeros(self.nof_generators, dtype=float)
 
     def is_linear(self):
+        """
+        Checks whether all costs are affine, i.e. no quadratic cost factors exist.
+        """
         return np.all(self.quadratic_coefficients == 0)

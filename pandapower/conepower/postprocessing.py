@@ -1,5 +1,4 @@
 from typing import Dict
-from sys import stdout
 
 import numpy as np
 
@@ -16,8 +15,8 @@ def postprocess(ppc: Dict,
                 elapsed_time: float,
                 success: bool,
                 objective_value: float,
-                constant_costs: np.ndarray[float],
-                variables: np.ndarray[float],
+                constant_costs: np.ndarray,
+                variables: np.ndarray,
                 variables_sets: Dict[VariableType, VariableSet]) -> Dict:
     # initialize
     result = ppc

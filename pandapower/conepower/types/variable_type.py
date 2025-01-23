@@ -2,6 +2,26 @@ from enum import Enum
 
 
 class VariableType(Enum):
+    """
+    Specifies the variable type.
+
+    Attributes
+    ----------
+    UMAG
+        A variable representing voltage magnitudes.
+    UANG
+        A variable representing voltage phase angles.
+    PG
+        A variable representing active power injections.
+    QG
+        A variable representing reactive power injections.
+    CJJ
+        A variable representing the diagonal elements of a Hermitian submatrix.
+    CJK
+        A variable representing the real parts of the off-diagonal elements of a Hermitian submatrix.
+    SJK
+        A variable representing the imaginary parts of the off-diagonal elements of a Hermitian submatrix.
+    """
     UNKNOWN = 0
     UMAG = 1
     UANG = 2

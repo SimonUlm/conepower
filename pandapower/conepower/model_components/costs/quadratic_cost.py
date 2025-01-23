@@ -7,7 +7,11 @@ from pandapower.conepower.model_components.constraints.constraints_socp import S
 
 
 class QuadraticCost:
-    quadratic_matrix: sparse.csr_matrix  # TODO: Document that f(x) = x^T * P * x + q^T * x!!!
+    """
+    Represents a quadratic cost function of the form f(x) = x^T * P * x + q^T * x,
+    where x is the variable vector, P is a Hermitian matrix, and q is a vector.
+    """
+    quadratic_matrix: sparse.csr_matrix
     linear_vector: np.ndarray
 
     def __init__(self,
@@ -24,6 +28,9 @@ class QuadraticCost:
             self.quadratic_matrix = sparse.csr_matrix((nof_variables, nof_variables), dtype=float)
 
     def _is_quadratic_matrix_diagonal(self) -> bool:
+        """
+        Checks whether the matrix P in f(x) is a diagonal matrix.
+        """
         _, first_occurrences = np.unique(self.quadratic_matrix.indptr[::-1], return_index=True)
         expected_indices = (len(self.quadratic_matrix.indptr) - 1 - first_occurrences)[:-1]
         return np.all(np.equal(expected_indices, self.quadratic_matrix.indices))
@@ -32,6 +39,10 @@ class QuadraticCost:
     def from_vectors(cls,
                      linear_vector: np.ndarray,
                      quadratic_vector: np.ndarray = None):
+        """
+        Constructs the object from a quadratic cost function of the form f(x) = p^T * x^2 + q^T * x,
+        where x is the variable vector and x^2 represents the element-wise square of x.
+        """
         # linear case
         if quadratic_vector is None:
             return cls(linear_vector)
@@ -45,16 +56,29 @@ class QuadraticCost:
                    diagonal_matrix)
 
     def is_linear(self):
+        """
+        Checks whether the cost function is linear, i.e., matrix P is the zero matrix.
+        """
         return self.quadratic_matrix.size == 0
 
-    # TODO: typing of return value
     def scale(self, scaling_factor: float):
+        """
+        Scales the cost function with a constant scaling factor.
+        """
         new_cost = deepcopy(self)
         new_cost.quadratic_matrix *= scaling_factor
         new_cost.linear_vector *= scaling_factor
         return new_cost
 
     def to_socp_constraints(self) -> SocpConstraints:
+        """
+        Constructs Socp constraints that represent the constraint α >= f(x),
+        where x is the variable vector and α is a newly introduced variable
+        that can now be minimized instead of the cost function f(x).
+
+        Precisely, the Socp constraints read ||(0.5 * (1 + q^T * x - α), P_ch * x)^T|| <= 0.5 * (1 - q^T * x + α),
+        where P_ch represents the Cholesky factorization of the cost matrix P, i.e., P = P_ch^T * P_ch.
+        """
         assert not self.is_linear()
         assert self._is_quadratic_matrix_diagonal()
         nof_variables = self.linear_vector.size

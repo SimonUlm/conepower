@@ -6,8 +6,6 @@ from scipy import sparse
 
 from pandapower.conepower.model_components.constraints.constraints_linear import LinearConstraints
 from pandapower.conepower.model_components.constraints.constraints_socp import SocpConstraints
-# TODO: Fix imports
-from pandapower.conepower.model_components.costs.generator_cost import GeneratorCost
 from pandapower.conepower.model_components.costs.quadratic_cost import QuadraticCost
 from pandapower.conepower.model_components.submatrices.submatrix_jabr import JabrSubmatrix
 from pandapower.conepower.model_components.vector_variable import VariableSet
@@ -17,6 +15,39 @@ from pandapower.conepower.types.variable_type import VariableType
 
 
 class ModelJabr:
+    """
+    Represents the Steady-State Single Time-Step Optimal Power Flow (OPF) problem,
+    relaxed with respect to Jabr's Relaxation.
+
+    Attributes
+    ----------
+    cost : QuadraticCost
+        The cost function which is either quadratic or linear.
+    jabr_constraints : SocpConstraints
+        The socp constraints that are the key feature of Jabr's Relaxation.
+        For radial networks, requiring equality instead of inequality of the `jabr_constraints`
+        would lead to a problem equivalent to the original OPF.
+    line_apparent_power_constraints : SocpConstraints
+        Constraints on the apparent power flow on lines.
+        The constraints are empty if `line_current_constraints` exist.
+    line_current_constraints : LinearConstraints
+        Constraints on the current flow on lines.
+        The constraints are empty if `line_apparent_power_constraints` exist.
+    nof_variables : int
+        The number of scalar-valued variables of the problem.
+    submatrix : JabrSubmatrix
+        The submatrix that replaces the voltage magnitudes and voltage phase angles as variables.
+    values : np.ndarray
+        The variable vector.
+    variable_sets : Dict[VariableType, VariableSet]
+        The sets the variables can be grouped into.
+        For Jabr's Relaxation these are:
+        `PG` (Active Power Injections),
+        `QG` (Reactive Power Injections),
+        `CJJ` (Diagonal Elements of the Submatrix),
+        'CJK' (Real Parts of the Elements in the Strict Upper Triangle of the Submatrix),
+        'SJK' (Imaginary Parts of the Elements in the Strict Upper Triangle of the Submatrix).
+    """
     cost: QuadraticCost
     jabr_constraints: SocpConstraints
     line_apparent_power_constraints: SocpConstraints
@@ -38,6 +69,9 @@ class ModelJabr:
     def _transfer_variables_with_box_constraints(self, opf: ModelOpf,
                                                  jabr_variable_type: VariableType,
                                                  starting_index: int) -> int:
+        """
+        Creates Jabr variables based on OPF variables.
+        """
         # get original variable type
         opf_variable_type = jabr_variable_type
         if jabr_variable_type is VariableType.CJJ:
@@ -65,6 +99,10 @@ class ModelJabr:
         return ending_index
 
     def _add_cjk_variables(self, opf: ModelOpf, starting_index: int) -> int:
+        """
+        Creates the real parts of the elements in the strict upper triangle of the Jabr submatrix,
+        based on the OPF variables.
+        """
         # for now, assume all angles are zero
         assert not opf.variable_sets[VariableType.UANG].values.any()
         ending_index = starting_index + opf.nof_unique_edges
@@ -74,6 +112,10 @@ class ModelJabr:
         return ending_index
 
     def _add_sjk_variables(self, opf: ModelOpf, starting_index: int) -> int:
+        """
+        Creates the imaginary parts of the elements in the strict upper triangle of the Jabr submatrix,
+        based on the OPF variables.
+        """
         # for now, assume all angles are zero
         assert not opf.variable_sets[VariableType.UANG].values.any()
         ending_index = starting_index + opf.nof_unique_edges
@@ -83,6 +125,9 @@ class ModelJabr:
         return ending_index
 
     def _add_active_generator_cost(self, opf: ModelOpf):
+        """
+        Creates a generic quadratic cost function based on the generator cost of the OPF problem.
+        """
         nof_active_power_injections = opf.variable_sets[VariableType.PG].size
         assert opf.active_generator_cost.nof_generators == nof_active_power_injections
         linear_vector = np.zeros(self.nof_variables, dtype=float)
@@ -93,6 +138,9 @@ class ModelJabr:
                                                quadratic_vector=quadratic_vector)
 
     def _add_power_flow_equalitites(self, opf: ModelOpf):
+        """
+        Creates the power flow equalities with respect to Jabr's Relaxation.
+        """
         # create matrices for cjj, cjk and sjk
         pg_matrix = self.submatrix.create_pg_linear_system_matrix(opf.admittances.y_bus)
         qg_matrix = self.submatrix.create_qg_linear_system_matrix(opf.admittances.y_bus)
@@ -116,6 +164,9 @@ class ModelJabr:
         self.power_flow_equalities = LinearConstraints(pf_matrix, rhs)
 
     def _add_jabr_constraints(self):
+        """
+        Creates the socp constraints that are the key feature of Jabr's Relaxation.
+        """
         # get constraints without considering the generator variables
         matrix_list, vector_list = self.submatrix.create_jabr_constraints()
         assert len(matrix_list) == len(vector_list)
@@ -130,6 +181,9 @@ class ModelJabr:
         self.jabr_constraints = SocpConstraints(matrix_list, vector_list)
 
     def _add_line_apparent_power_constraints(self, opf: ModelOpf):
+        """
+        Creates the constraints on the apparent power flow on lines.
+        """
         # get constraints without considering the generator variables
         matrix_list, scalar_list = self.submatrix.create_line_apparent_power_constraints(opf.lines.max_line_flows,
                                                                                          opf.admittances.y_ff,
@@ -147,6 +201,9 @@ class ModelJabr:
                                                                rhs_scalars=scalar_list)
 
     def _add_line_current_constraints(self, opf: ModelOpf):
+        """
+        Creates the constraints on the current flow on lines.
+        """
         # get constraints without considering the generator variables
         matrix, rhs = self.submatrix.create_line_current_constraints(opf.lines.max_line_flows,
                                                                      opf.admittances.y_ff,
@@ -167,6 +224,9 @@ class ModelJabr:
                               connectivity_matrix: sparse.csc_matrix,
                               index: int,
                               index_from: int = -1):
+        """
+        Recovers the voltage phase angle at a bus from the Jabr variables, assuming Jabr's Relaxation is feasible.
+        """
         # update
         if index_from == -1:
             angles.values[index] = 0
@@ -187,10 +247,16 @@ class ModelJabr:
             self._recover_angle_at_bus(angles, connectivity_matrix, idx, index)
 
     def _recover_angles(self, variable_sets: Dict[VariableType, VariableSet]):
+        """
+        Recovers the voltage phase angles from the Jabr variables, assuming Jabr's Relaxation is feasible.
+        """
         connectivity_matrix = self.submatrix.get_connectivity_matrix()
         self._recover_angle_at_bus(variable_sets[VariableType.UANG], connectivity_matrix, 0)
 
     def _calculate_jabr_infeasibility_squared(self) -> float:
+        """
+        Calculates "how far away" the Jabr constraints are from equality.
+        """
         squared_error: float = 0.
         socps = self.jabr_constraints
         for i in range(socps.nof_constraints):
@@ -200,15 +266,33 @@ class ModelJabr:
         return squared_error
 
     def set_values(self, values: np.ndarray):
+        """
+        Sets the variable vector.
+        """
         assert values.shape == self.values.shape
         np.copyto(self.values, values)
 
     def calculate_jabr_infeasibility(self) -> float:
+        """
+        Calculates "how far away" the Jabr constraints are from equality.
+        """
         return math.sqrt(self._calculate_jabr_infeasibility_squared())
 
     @classmethod
     def from_opf(cls, opf: ModelOpf):
+        """
+        Relaxes the original OPF with respect to Jabr's Relaxation and creates an instance of the ModelJabr class.
 
+        Parameters
+        ----------
+        opf : ModelOpf
+            The object that represents the original OPF problem.
+
+        Returns
+        -------
+        jabr : ModelJabr
+            An instance of the ModelJabr class.
+        """
         # initialize
         jabr = cls()
         jabr.nof_variables = (opf.variable_sets[VariableType.PG].size +
@@ -253,7 +337,10 @@ class ModelJabr:
         return jabr
 
     def to_opf_variables(self) -> (Dict[VariableType, VariableSet], np.ndarray):
-
+        """
+        Recovers the OPF variables from the Jabr variables,
+        assuming Jabr's Relaxation is feasible and that the reference angle is zero.
+        """
         # initialize
         nof_variables = (self.variable_sets[VariableType.PG].size +
                          self.variable_sets[VariableType.QG].size +
@@ -261,7 +348,6 @@ class ModelJabr:
         variables = np.empty(nof_variables)
         variable_sets = {}
 
-        # TODO: Fix horrible code below
         # pg
         starting_index = 0
         ending_index = self.variable_sets[VariableType.PG].size
@@ -280,7 +366,7 @@ class ModelJabr:
         variable_sets[VariableType.UMAG] = VariableSet(values_data=np.sqrt(self.variable_sets[VariableType.CJJ].values),
                                                        values_allocated_memory=variables[starting_index:ending_index])
 
-        # uang TODO: Only works for bus 0 as the ref bus with angle 0!!!
+        # uang
         starting_index = ending_index
         ending_index = starting_index + self.variable_sets[VariableType.CJJ].size
         variable_sets[VariableType.UANG] = VariableSet(values_data=np.empty(self.variable_sets[VariableType.CJJ].size),

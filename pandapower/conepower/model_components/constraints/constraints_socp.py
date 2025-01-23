@@ -7,6 +7,10 @@ from pandapower.conepower.model_components.constraints.constraints_base import C
 
 
 class SocpConstraints(Constraints):
+    """
+    Socp constraints of the form ||E_i * x + f_i|| + g_i^T * x + d_i <= 0 for i = 1, ..., q,
+    where x is the variable vector, E_i are matrices, f_i and g_i are vectors, and d_i are scalars.
+    """
     lhs_matrices: List[sparse.lil_matrix] = None
     lhs_vectors: List[sparse.lil_matrix] = None
     rhs_scalars: List[float] = None

@@ -1,6 +1,5 @@
 from time import perf_counter
 
-import numpy as np
 from numpy import zeros, c_, shape
 
 from pandapower.conepower.models.model_opf import ModelOpf
@@ -10,7 +9,6 @@ from pandapower.conepower.postprocessing import postprocess
 from pandapower.conepower.types.line_constraint_type import LineConstraintType
 from pandapower.conepower.types.relaxation_type import RelaxationType
 from pandapower.conepower.types.optimization_type import OptimizationType
-from pandapower.conepower.types.variable_type import VariableType  # required for debugging
 
 from pandapower.pypower.idx_brch import MU_ANGMAX
 from pandapower.pypower.idx_bus import MU_VMIN
@@ -23,10 +21,10 @@ def conv_opf(ppc, ppopt, relaxation_str, flow_limit_str, **kwargs):
     # initialize
     t0 = perf_counter()
 
-    # process input arguments
+    # process input arguments (copied from PYPOWER)
     ppc, ppopt = opf_args2(ppc, ppopt)
 
-    # add zero columns to bus, gen, branch for multipliers, etc. if needed
+    # add zero columns to bus, gen, branch for multipliers, etc. if needed (copied from PYPOWER)
     nb = shape(ppc['bus'])[0]
     nl = shape(ppc['branch'])[0]
     ng = shape(ppc['gen'])[0]
@@ -37,7 +35,7 @@ def conv_opf(ppc, ppopt, relaxation_str, flow_limit_str, **kwargs):
     if shape(ppc['branch'])[1] < MU_ANGMAX + 1:
         ppc['branch'] = c_[ppc['branch'], zeros((nl, MU_ANGMAX + 1 - shape(ppc['branch'])[1]))]
 
-    # construct OPF model object
+    # construct OPF model object (copied from PYPOWER)
     om = opf_setup(ppc, ppopt)
 
     # convert to own model
@@ -81,7 +79,6 @@ def conv_opf(ppc, ppopt, relaxation_str, flow_limit_str, **kwargs):
         error = jabr.calculate_jabr_infeasibility()
         output['relaxation_error'] = error
         variable_sets, variables = jabr.to_opf_variables()
-        #np.copyto(model.values, variables)  # TODO: Refactor
         result = postprocess(ppc=ppc,
                              om=om,
                              elapsed_time=et,

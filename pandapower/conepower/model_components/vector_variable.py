@@ -2,6 +2,9 @@ import numpy as np
 
 
 class VariableSet:
+    """
+    Represents a vector variable, including its box constraints, i.e. lower and upper bounds.
+    """
     lower_bounds: np.ndarray
     size: int
     upper_bounds: np.ndarray
@@ -25,4 +28,3 @@ class VariableSet:
         if upper_bounds is not None:
             assert upper_bounds.size == self.size
             self.upper_bounds = upper_bounds
-    # TODO: Introduce offset to determine the offset within the allocated memory.

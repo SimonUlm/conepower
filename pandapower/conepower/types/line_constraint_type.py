@@ -2,6 +2,9 @@ from enum import Enum
 
 
 class LineConstraintType(Enum):
+    """
+    Specifies how the electrical lines are constrained.
+    """
     UNKNOWN = 0
     APPARENT_POWER = 1
     CURRENT = 2

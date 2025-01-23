@@ -15,12 +15,49 @@ from pandapower.conepower.unit_conversions.per_unit_converter import PerUnitConv
 from pandapower.pypower.idx_brch import F_BUS, T_BUS, RATE_A
 from pandapower.pypower.idx_cost import MODEL, STARTUP, SHUTDOWN, NCOST, COST, POLYNOMIAL
 from pandapower.pypower.idx_gen import GEN_STATUS
-from pandapower.pypower.makeSbus import _get_Cg, _get_Sload  # TODO: Think of a better way.
+from pandapower.pypower.makeSbus import _get_Cg, _get_Sload
 from pandapower.pypower.makeYbus import branch_vectors, makeYbus
 from pandapower.pypower.opf_model import opf_model
 
 
 class ModelOpf:
+    """
+    Represents the Steady-State Single Time-Step Optimal Power Flow (OPF) problem in its original form.
+
+    Note that the only cost function currently supported is a function of the active power injections.
+
+    Attributes
+    ----------
+    active_generator_cost : GeneratorCost
+        The cost of the active power injections of the generators.
+    admittances : Admittances
+        The admittances of the system that define the electrical network.
+    generator_connection_matrix : sparse.csr_matrix
+        A matrix that relates the generators to their respective connecting nodes.
+    lines : Lines
+        A list of all electrical lines in the network, including their respective limits.
+    loads_active : np.ndarray
+        The active power consumptions per node.
+    loads_reactive : np.ndarray
+        The reactive power consumptions per node.
+    nof_unique_edges : int
+        The number of edges in the network when disregarding duplicate lines.
+        Since more than one electrical line can occur per edge,
+        the value of `_nof_unique_edges` is generally smaller equal the number of `lines`.
+    nof_nodes : int
+        The number of nodes in the network.
+    nof_variables : int
+        The number of scalar-valued variables of the problem.
+    values : np.ndarray
+        The variable vector.
+    variable_sets : Dict[VariableType, VariableSet]
+        The sets the variables can be grouped into.
+        For OPF these are:
+        `PG` (Active Power Injections),
+        `QG` (Reactive Power Injections),
+        `UMAG` (Voltage Magnitudes),
+        `UANG` (Voltage Phase Angles).
+    """
     active_generator_cost: GeneratorCost
     admittances: Admittances
     generator_connection_matrix: sparse.csr_matrix
@@ -38,11 +75,29 @@ class ModelOpf:
         self.nof_nodes = 0
         self.nof_variables = 0
         self.variable_sets = {}
-        # self.linear_equality_constraints: LinearEqualityConstraints
-        # self.linear_inequality_constraints: LinearInequalityConstraints
 
     @classmethod
     def from_om(cls, om: opf_model, line_constraint_type: LineConstraintType = LineConstraintType.CURRENT):
+        """
+        Gathers the information from the PYPOWER model and creates an instance of the ModelOpf class.
+
+        Parameters
+        ----------
+        om : opf_model
+            The mathematical model as defined by PYPOWER.
+        line_constraint_type : LineConstraintType, optional
+            The type of line constraints that are to be enforced. Default is current constraints.
+
+        Returns
+        -------
+        model : ModelOpf
+            An instance of the ModelOpf class.
+
+        Raises
+        ------
+        ValueError
+            If the cost function is not supported.
+        """
         # initialize
         model = cls()
         model.nof_variables = om.var['N']
@@ -98,9 +153,12 @@ class ModelOpf:
         gen_cost = om.ppc['gencost']
         nof_generators = model.variable_sets[VariableType.PG].size
         assert gen_cost.shape[0] == nof_generators
-        assert np.all(gen_cost[:, MODEL] == POLYNOMIAL)  # polynomial model
-        assert np.all(gen_cost[:, STARTUP] == 0)  # no startup cost
-        assert np.all(gen_cost[:, SHUTDOWN] == 0)  # no shutdown cost
+        if np.any(gen_cost[:, MODEL] != POLYNOMIAL):
+            raise ValueError("Only polynomial cost functions are supported.")
+        if np.any(gen_cost[:, STARTUP] != 0):
+            raise ValueError("Generator startup costs are not supported.")
+        if np.any(gen_cost[:, SHUTDOWN] != 0):
+            raise ValueError("Generator shutdown costs are not supported.")
         # filter out empty cost functions
         mask = gen_cost[:, NCOST] > 0
         # define quadratic cost
@@ -113,7 +171,7 @@ class ModelOpf:
             linear_coefficients = converter.from_linear_generator_cost(gen_cost[:, COST].astype(float))
             constants = gen_cost[:, COST + 1].astype(float)
         else:
-            assert False
+            raise ValueError("Only linear and quadratic cost functions are supported.")
         model.active_generator_cost = GeneratorCost(quadratic_coefficients=quadratic_coefficients,
                                                     linear_coefficients=linear_coefficients,
                                                     constants=constants)
