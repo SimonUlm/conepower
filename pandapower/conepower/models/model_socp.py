@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Self, Tuple
 
 import numpy as np
 from cvxopt import solvers
@@ -147,7 +147,7 @@ class ModelSocp:
         return cvxvector(vector)
 
     @classmethod
-    def from_jabr(cls, jabr: ModelJabr):
+    def from_jabr(cls, jabr: ModelJabr) -> Self:
         """
         Transforms Jabr's Relaxation into a generic second-order cone program.
 

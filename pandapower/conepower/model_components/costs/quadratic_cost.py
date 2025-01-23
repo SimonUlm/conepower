@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Self
 
 import numpy as np
 from scipy import sparse
@@ -38,7 +39,7 @@ class QuadraticCost:
     @classmethod
     def from_vectors(cls,
                      linear_vector: np.ndarray,
-                     quadratic_vector: np.ndarray = None):
+                     quadratic_vector: np.ndarray = None) -> Self:
         """
         Constructs the object from a quadratic cost function of the form f(x) = p^T * x^2 + q^T * x,
         where x is the variable vector and x^2 represents the element-wise square of x.
@@ -55,13 +56,13 @@ class QuadraticCost:
         return cls(linear_vector,
                    diagonal_matrix)
 
-    def is_linear(self):
+    def is_linear(self) -> bool:
         """
         Checks whether the cost function is linear, i.e., matrix P is the zero matrix.
         """
         return self.quadratic_matrix.size == 0
 
-    def scale(self, scaling_factor: float):
+    def scale(self, scaling_factor: float) -> Self:
         """
         Scales the cost function with a constant scaling factor.
         """

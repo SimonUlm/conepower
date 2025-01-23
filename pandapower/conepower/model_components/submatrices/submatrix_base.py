@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 import numpy as np
 from scipy import sparse
@@ -181,7 +182,7 @@ class HermitianSubmatrix:
         self._full_off_diag_to_sym_upper_tri = mapping_matrix.tocsr(copy=True).transpose()
         self._full_off_diag_to_sym_upper_tri.data[:] = 1
 
-    def _get_idx(self, i: int, j: int) -> (int, bool):
+    def _get_idx(self, i: int, j: int) -> Tuple[int, bool]:
         """
         Returns the index in the `_data` storage that corresponds to the element at (i, j) in the Hermitian submatrix,
         along with a boolean indicating whether the element is in the strict lower triangle.
@@ -195,7 +196,7 @@ class HermitianSubmatrix:
 
         Returns
         -------
-        index, conj : (int, bool)
+        index, conj : Tuple[int, bool]
             The index in the `_data` array corresponding to the element at (i, j),
             and boolean value that indicates whether the element is in the strict lower triangle.
 

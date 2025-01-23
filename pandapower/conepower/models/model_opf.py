@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict
+from typing import Dict, Self
 
 import numpy as np
 from scipy import sparse
@@ -77,7 +77,7 @@ class ModelOpf:
         self.variable_sets = {}
 
     @classmethod
-    def from_om(cls, om: opf_model, line_constraint_type: LineConstraintType = LineConstraintType.CURRENT):
+    def from_om(cls, om: opf_model, line_constraint_type: LineConstraintType = LineConstraintType.CURRENT) -> Self:
         """
         Gathers the information from the PYPOWER model and creates an instance of the ModelOpf class.
 

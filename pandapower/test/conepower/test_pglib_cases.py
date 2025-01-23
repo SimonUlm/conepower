@@ -1,7 +1,4 @@
 import os
-from math import log10, floor
-
-import pytest
 
 import pandapower as pp
 

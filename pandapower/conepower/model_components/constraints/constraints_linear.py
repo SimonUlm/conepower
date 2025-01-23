@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Self, Tuple
 
 import numpy as np
 from scipy import sparse
@@ -27,7 +27,7 @@ class LinearConstraints(Constraints):
         else:
             assert False
 
-    def __add__(self, other):
+    def __add__(self, other: Self) -> Self:
         if self.is_empty() and other.is_empty():
             return self
         if self.is_empty():
@@ -43,7 +43,7 @@ class LinearConstraints(Constraints):
         self.matrix = sparse.hstack((sparse.csr_matrix((self.matrix.shape[0], 1), dtype=float), self.matrix),
                                     format='csr')
 
-    def scaled(self):
+    def scaled(self) -> Self:
         if self.is_empty():
             return self
         row_wise_norms = np.sqrt(self.matrix.multiply(self.matrix).sum(axis=1))

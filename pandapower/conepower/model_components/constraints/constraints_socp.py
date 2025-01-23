@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Self, Tuple
 
 import numpy as np
 from scipy import sparse
@@ -75,7 +75,7 @@ class SocpConstraints(Constraints):
         else:
             self.rhs_scalars = [0 for _ in range(self.nof_constraints)]
 
-    def __add__(self, other):
+    def __add__(self, other: Self) -> Self:
         if self.is_empty() and other.is_empty():
             return self
         if self.is_empty():
@@ -100,7 +100,7 @@ class SocpConstraints(Constraints):
             self.rhs_vectors[i] = sparse.vstack((sparse.csr_matrix((1, 1), dtype=float), vector),
                                                  format='lil')
 
-    def scaled(self):
+    def scaled(self) -> Self:
         if self.is_empty():
             return self
         scaled_lhs_matrices = []

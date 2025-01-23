@@ -34,7 +34,7 @@ class GeneratorCost:
         else:
             self.constants = np.zeros(self.nof_generators, dtype=float)
 
-    def is_linear(self):
+    def is_linear(self) -> bool:
         """
         Checks whether all costs are affine, i.e. no quadratic cost factors exist.
         """

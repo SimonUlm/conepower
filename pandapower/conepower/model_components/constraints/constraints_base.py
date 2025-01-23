@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Self, Tuple
 
 import numpy as np
 from scipy import sparse
@@ -11,14 +11,14 @@ class Constraints(ABC):
     """
     nof_constraints: int = 0
 
-    def __init__(self, nof_constraints):
+    def __init__(self, nof_constraints: int):
         self.nof_constraints = nof_constraints
 
     @abstractmethod
-    def __add__(self, other):
+    def __add__(self, other: Self):
         pass
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: Self) -> Self:
         return self + other
 
     @abstractmethod

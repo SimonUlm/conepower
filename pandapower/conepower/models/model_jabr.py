@@ -1,5 +1,5 @@
 import math
-from typing import Dict
+from typing import Dict, Self, Tuple
 
 import numpy as np
 from scipy import sparse
@@ -279,7 +279,7 @@ class ModelJabr:
         return math.sqrt(self._calculate_jabr_infeasibility_squared())
 
     @classmethod
-    def from_opf(cls, opf: ModelOpf):
+    def from_opf(cls, opf: ModelOpf) -> Self:
         """
         Relaxes the original OPF with respect to Jabr's Relaxation and creates an instance of the ModelJabr class.
 
@@ -336,7 +336,7 @@ class ModelJabr:
 
         return jabr
 
-    def to_opf_variables(self) -> (Dict[VariableType, VariableSet], np.ndarray):
+    def to_opf_variables(self) -> Tuple[Dict[VariableType, VariableSet], np.ndarray]:
         """
         Recovers the OPF variables from the Jabr variables,
         assuming Jabr's Relaxation is feasible and that the reference angle is zero.
