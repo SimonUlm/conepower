@@ -3,7 +3,7 @@ import os
 import pandapower as pp
 
 
-LOG_OUT = os.path.join(pp.pp_dir, 'test', 'conepower', 'logs', 'validation.log')
+LOG_OUT = os.path.join(pp.pp_dir, 'test', 'conepower', 'validation.log')
 FOLDER = os.path.join(pp.pp_dir, 'test', 'conepower', 'testfiles')
 REL_ERROR_TOL = 1e-6
 
@@ -19,7 +19,7 @@ def assert_is_close_to_pm_result(filename, pm_result: float):
                   enforce_ext_grid_vm=False,
                   flow_limit='S')
     rel_error = abs(net['res_cost'] - pm_result) / abs(pm_result)
-    with open(LOG_OUT, 'a') as log_file:
+    with open(LOG_OUT, 'w') as log_file:
         log_file.write(filename + ": " + str(rel_error) + "\n")
     assert rel_error < REL_ERROR_TOL
 
